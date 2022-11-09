@@ -1371,6 +1371,69 @@ class GraphFrame:
         new_gf.drop_index_levels()
         return new_gf
 
+    def hotpath(self, metric=None):
+        def find_hotpath(graphframe, metric, parent_node, cpath):
+            # if parent node is a leaf, return callpath
+            if not parent_node.children:
+                return cpath
+
+            # initial tuple for max metric and corresponding node
+            max_child = None
+            max_child_val = 0
+
+            # iterate over children, append node with highest metric value to callpath
+            for child in parent_node.children:
+                cmetric = graphframe.dataframe.loc[child, metric]
+                if cmetric > max_child_val:
+                    max_child_val = cmetric
+                    max_child = child
+
+            # if all children have 0 metric value, return callpath
+            if not max_child:
+                return cpath
+
+            cpath.append(max_child)
+
+            # continue with child node with highest metric value
+            return find_hotpath(graphframe, metric, max_child, cpath)
+
+        callpath = []
+
+        gf_copy = self.copy()
+        gf_copy.drop_index_levels()
+
+        if not metric:
+            metric = self.default_metric
+
+        if metric not in gf_copy.dataframe.columns:
+            raise KeyError(
+                "metric={} does not exist in the dataframe, please select a valid column. See a list of the available metrics with GraphFrame.show_metric_columns().".format(
+                    metric
+                )
+            )
+
+        # initial tuple for max metric and corresponding node
+        max_root = None
+        max_root_val = 0
+
+        # iterate over children, append node with highest metric value to cpath
+        for root in self.graph.roots:
+            rmetric = gf_copy.dataframe.loc[root, metric]
+            if rmetric > max_root_val:
+                max_root_val = rmetric
+                max_root = root
+
+        # if all roots have 0 metric value, return empty callpath
+        if not max_root:
+            return []
+
+        callpath.append(max_root)
+
+        # TODO What if multiple roots have same max value?
+
+        # search for hotpath starting at root node with highest metric value
+        return find_hotpath(gf_copy, metric, max_root, callpath)
+
     def add(self, other):
         """Returns the column-wise sum of two graphframes as a new graphframe.
 
