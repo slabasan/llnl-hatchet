@@ -1255,3 +1255,14 @@ def test_generate_exclusive_columns_w_multi_index(calc_pi_hpct_db):
     gf_time.generate_exclusive_columns()
     assert "time (exc)" in gf_time.exc_metrics
     assert gf.dataframe["time"].equals(gf_time.dataframe["time (exc)"])
+
+
+def test_hotpath(mock_graph_literal):
+    gf = GraphFrame.from_literal(mock_graph_literal)
+
+    hotpath = gf.hotpath("time")
+
+    assert len(hotpath) == 3
+    assert hotpath[0].frame["name"] == "waldo"
+    assert hotpath[1].frame["name"] == "bar"
+    assert hotpath[2].frame["name"] == "grault"
